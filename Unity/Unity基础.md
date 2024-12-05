@@ -385,3 +385,240 @@ Quaternion.identity
 ![image-20241202165100622](./assets/image-20241202165100622.png)
 
 脚本依附对象销毁或者脚本移除，延迟函数无法继续执行
+
+### 协同程序
+
+##### Unity支持多线程
+
+Unity新开线程无法直接访问Unity相关对象的内容
+unity线程记得关闭，不然和unity编辑器共生
+
+##### 协同程序是什么
+
+“假”的多线程
+主要作用：将代码分时执行，不卡主线程
+主要使用场景：异步下载文件，异步加载文件，场景异步创建，批量创建时防止卡顿
+
+##### 协同程序和线程的区别
+
+新开一个线程是独立的一个管道，和主线程并行执行
+新开一个协程是在原线程上开启，进行逻辑分时分步执行
+
+##### 协程的使用
+
+继承MonoBehavior的类都能开启协程函数
+
+第一步：申明协程函数
+
+- 协程函数返回值必须是IEnumerator或者是继承他的类型
+- 协程函数必须使用yield return进行返回
+
+第二步：开启协程函数
+	协程函数不能直接像函数一样去调用
+
+常用开启方式
+- StartCoroutine(MyCoroutine())
+- IEnumerator ie=MyCoroutine()
+  StartCoroutine(ie)
+
+第三步：退出协程函数
+	关闭所有协程：`StopAllCoroutines()`
+	关闭指定协程：
+
+```c#
+Coroutine c=StartCoroutinr(MyCoroutine());
+StopCoroutine(c);
+```
+
+##### yield return 不同内容的含义
+
+1. 下一帧执行
+
+   - yield return 数字
+   - yield return null
+
+   在Update和LateUpdate之间执行
+
+2. 等待指定秒后执行
+
+   - yield return new WaitForSecond(秒)
+
+   在Update和LateUpdate之间执行
+
+3. 等待下一个固定物理帧更新时执行
+
+   - yield return new WaitForFixedUpdate();
+
+   在FixedUpdate和碰撞检测相关函数之后执行
+
+4. 等待摄像机和GUI渲染完成后执行
+
+   - yield return new WaitForEndOfFrame();//一般用于截图功能
+
+   在LateUpdate之后的渲染相关处理完毕后执行
+
+5. 一些特殊类型的对象，比如异步加载相关函数返回的对象，之后讲解，一般在Update和LateUpdate之间执行
+
+6. 跳出协程
+   yield break；
+
+##### 协程受对象和组件失活销毁的影响
+
+协程开启后，组件和物体销毁，协程不执行；物体失活协程不执行，组件（脚本）失活协程执行
+
+#### 协程原理
+
+##### 协程的本质
+
+![image-20241203214347512](./assets/image-20241203214347512.png)
+
+##### 协程本体是迭代器方法的体现
+
+![image-20241203214536736](./assets/image-20241203214536736.png)
+
+##### 协程调度器
+
+![image-20241203214720255](./assets/image-20241203214720255.png)
+
+## Resources资源动态加载
+
+### Unity中的特殊文件夹
+
+#### 工程路径获取
+
+```c#
+Application.dataPath//该方式获取到的路径一般情况下只在编辑模式下使用，在游戏实际发布后，不会使用该路径，因为游戏发布过后，该路径就不存在了
+```
+
+#### Resources资源文件夹
+
+手动创建这个文件夹，且名字不要拼错
+获取：
+
+```c#
+Application.dataPath + "/Resources" //一般不进行路径获取，只能使用Resources相关API进行加载，如果硬要获取，可以用工程路径拼接
+```
+
+注意：
+![image-20241204170957542](./assets/image-20241204170957542.png)
+
+#### StreamingAssets 流动资源文件夹
+
+路径获取：
+```c#
+Application.streamingAssetsPath//不能通过dataPath去拼接获取
+```
+
+注意：
+![image-20241204171359166](./assets/image-20241204171359166.png)
+
+#### persistentDataPath 持久数据文件夹
+
+路径获取：
+```c#
+Application.persistentDataPath
+```
+
+注意：
+![image-20241204171710989](./assets/image-20241204171710989.png)
+
+#### Plugins 插件文件夹
+
+![image-20241204171929280](./assets/image-20241204171929280.png)
+
+#### Editor 编辑器文件夹
+
+![image-20241204172057463](./assets/image-20241204172057463.png)
+
+#### Standard Assets 默认资源文件夹
+
+![image-20241204172230556](./assets/image-20241204172230556.png)
+
+### Resources同步加载
+
+#### Resurces资源动态加载的作用
+
+![image-20241204172937586](./assets/image-20241204172937586.png)
+
+#### 常用资源类型
+
+![image-20241204173237778](./assets/image-20241204173237778.png)
+
+#### 资源同步加载 普通方法
+
+```c#
+Resources.Load("路径+name");//return Object
+```
+
+预设体资源
+![image-20241204174126404](./assets/image-20241204174126404.png)
+
+音效资源
+![image-20241204174846549](./assets/image-20241204174846549.png)
+
+文本资源
+![image-20241204175321409](./assets/image-20241204175321409.png)
+
+图片
+![image-20241204175604788](./assets/image-20241204175604788.png)
+
+其他类型
+![image-20241204175626866](./assets/image-20241204175626866.png)
+
+问题：资源同名怎么办
+![image-20241204180205898](./assets/image-20241204180205898.png)
+
+#### 资源同步加载 泛型方法
+
+![image-20241204180534083](./assets/image-20241204180534083.png)
+
+### Resources异步加载
+
+#### Resources异步加载是什么
+
+![image-20241205161048535](./assets/image-20241205161048535.png)
+
+#### Resources异步加载方法
+
+异步加载不能马上得到加载的资源，至少等一帧
+
+1.通过异步加载中的完成事件监听，使用加载的资源
+
+```c#
+ResourceRequest rq=Resources.LoadAsync<T>(string path)
+rq.completed += LoadOver;
+private void LoadOver(AsyncOperation rq)
+{
+    //资源加载结束之后逻辑
+    print("加载结束");
+    (rq as ResourceRequest).asset//return object,asset是资源对象
+}
+```
+
+![image-20241205162038313](./assets/image-20241205162038313.png)
+
+![image-20241205162116853](./assets/image-20241205162116853.png)
+
+2.通过协程使用加载的资源
+
+![image-20241205162738789](./assets/image-20241205162738789.png)
+
+![image-20241205162943217](./assets/image-20241205162943217.png)
+
+![image-20241205163323162](./assets/image-20241205163323162.png)
+
+总结
+![image-20241205163110203](./assets/image-20241205163110203.png)
+
+###  Resources卸载资源
+
+#### Resources重复加载资源会浪费内存吗
+
+![image-20241205171438022](./assets/image-20241205171438022.png)
+
+#### 如何手动释放缓存中的资源
+
+![image-20241205172149950](./assets/image-20241205172149950.png)
+
+## 场景异步切换
+
