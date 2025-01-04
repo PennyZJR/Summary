@@ -622,3 +622,226 @@ private void LoadOver(AsyncOperation rq)
 
 ## 场景异步切换
 
+##### 场景同步切换回顾
+
+![image-20241205200612021](./assets/image-20241205200612021.png)
+
+##### 场景异步切换
+
+1.通过事件回调函数异步加载
+
+```c#
+AsyncOperation ao= SceneManager.LoadSceneAsync("Scene name");
+ao.completed += (a)=>
+{
+    
+};
+```
+
+![image-20241205201522332](./assets/image-20241205201522332.png)
+
+2.通过协程函数异步加载
+
+![image-20241205203531490](./assets/image-20241205203531490.png)
+
+![image-20241205203729728](./assets/image-20241205203729728.png)
+
+![image-20241205203746306](./assets/image-20241205203746306.png)
+
+##### 总结
+
+![image-20241205203605952](./assets/image-20241205203605952.png)
+
+## 画线功能Linerenderer
+
+### LineRenderer是什么？
+
+![image-20241206140658205](./assets/image-20241206140658205.png)
+
+### LineRenderer参数相关
+
+![image-20241206142626850](./assets/image-20241206142626850.png)
+
+![image-20241206140738566](./assets/image-20241206140738566.png)
+
+![image-20241206141637998](./assets/image-20241206141637998.png)
+
+  ![image-20241206141926137](./assets/image-20241206141926137.png)
+
+当使用世界坐标系时改，变物体坐标，线不会动
+
+![image-20241206142512365](./assets/image-20241206142512365.png)
+
+### LineRenderer代码相关
+
+1. 动态添加一个线段
+   ```c#
+   GameObject line=new GameObject();
+   line.name="Line";
+   LineRenderer lr=line.AddComponent<LineRenderer>();
+   ```
+
+2. 首尾相连
+   ```c#
+   lr.loop=true;
+   ```
+
+3. 开始结束宽
+   ```c#
+   lr.startWidth=0.02f;
+   lr.endWidth=0.02f;
+   ```
+
+4. 开始结束颜色
+   ```c#
+   lr.startColor=Color.white;
+   lr.endColor=Color.red;
+   ```
+
+5. 设置材质
+   ```c#
+   Material m=Resources.Load<Material>("M");
+   lr.material=m;
+   ```
+
+6. 设置点
+   ```c#
+   lr.positionCount=4;
+   lr.SetPositions(new Vector3[]{
+       new Vector3(0,0,0),
+       new Vector3(0,0,5),
+       new Vector3(5,0,5)
+           //最后一个位置默认被赋值为{0,0,0}
+   })
+       lr.SetPosition(3,new Vector3(5,0,0));
+       
+   ```
+
+   ![image-20241206144629799](./assets/image-20241206144629799.png)
+
+7. 是否使用世界坐标系
+   ```c#
+   lr.useWorldSpace=false;
+   ```
+
+8. 
+   ![image-20241206144736562](./assets/image-20241206144736562.png)
+
+## 核心系统
+
+### 物理系统之范围检测
+
+#### 什么是范围检测？
+
+![image-20241206161722895](./assets/image-20241206161722895.png)
+
+#### 如何进行范围检测？
+
+**必备条件：**想要被范围检测的对象必须具有碰撞器
+**注意点：**
+1.范围检测相关API只有当执行该句代码时进行一次范围检测，它是瞬时的
+2.范围检测相关API并不会真正产生一个碰撞器，只是碰撞计算而已
+
+**范围检测API**
+
+盒形范围检测
+
+![image-20241206163920523](./assets/image-20241206163920523.png)
+**size为半尺寸**
+
+![image-20241206164354435](./assets/image-20241206164354435.png)
+
+**另一个API**
+![image-20241206164519585](./assets/image-20241206164519585.png)
+
+球形范围检测
+
+![image-20241206165109365](./assets/image-20241206165109365.png)
+
+胶囊范围检测
+
+![image-20241206165716218](./assets/image-20241206165716218.png)
+
+### 物理系统之射线检测
+
+#### 什么是射线检测？
+
+![image-20241207143821804](./assets/image-20241207143821804.png)
+
+#### 射线对象
+
+1.3D世界中的射线
+
+```c#
+Ray r=new Ray(Vector3 origin,Vector3 direction);//声名一个射线对象
+```
+
+![image-20241207144703217](./assets/image-20241207144703217.png)
+2.摄像机发射出的射线
+
+```c#
+Ray r=Camera.main.ScreenPointToRay(Input.mousePosition);
+```
+
+![image-20241207144722035](./assets/image-20241207144722035.png)
+
+#### 碰撞检测函数
+
+射线检测也是瞬时的，代码执行时进行一次射线检测
+
+1.最原始的射线检测
+
+```c#
+Ray r=new Ray(Vector3.zero,Vector3.forward);
+Physics.Raycast(r,1000,1<<LayerMask.NameToLayer("Monster"),QueryTriggerInteraction.UseGlobal);
+//return bool
+//只能检测到是否碰撞到了对象，得不到碰撞对象信息
+//也可以传入射线的起点和方向，不直接传入射线
+```
+
+![image-20241207152150596](./assets/image-20241207152150596.png)
+2.获取相交的单个物体的信息
+![image-20241207152213359](./assets/image-20241207152213359.png)
+
+```c#
+RaycastHit hitInfo;
+if(Physics.Raycast(r,out hitInfo,1000,1<<LayerMask.NameToLayer("Monster"),QueryTriggerInteraction.UseGlobal))
+{
+    //碰撞器信息
+    hitInfo.collider;
+    //碰撞到的点
+    hitInfo.point;
+    //法线信息
+    hitInfo.normal;
+    //得到碰撞对象的位置
+    hitInfo.transform.position;
+    //得到碰撞对象离自己的距离
+    hitInfo.distance;  
+}
+//return bool
+//也有一种重载，不用传入射线，直接传入起点和方向
+
+```
+
+3.获取相交的多个物体的信息
+![image-20241207152251660](./assets/image-20241207152251660.png)
+
+```c#
+RaycastHit[] hits=Physices.RaycastAll(r,1000,1<<LayerMask.NameToLayer("Monster"),QueryTriggerInteraction.UseGlobal);
+//先进来的在数组后面，后进来的在前面
+//还有一种重载，不用传入射线，直接传入起点和方向
+```
+
+4.返回碰撞的数量，用过out得到数据
+
+```c#
+hits=Physics.RaycastNonAlloc(r,hits,......);
+```
+
+
+
+#### 使用时应注意的问题
+
+距离，层级两个参数都是int类型，不要弄混
+
+![image-20241207151937145](./assets/image-20241207151937145.png)
